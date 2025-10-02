@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
+using System.Threading;
 
 namespace GameDBms
 {
@@ -23,11 +24,16 @@ namespace GameDBms
 
         DBAgent _agentDB;
         CommandManager _cmdMng;
+        NetManager _netMng;
+
+        Thread _netMain;
 
         public DBManager()
         {
             _cmdMng = new CommandManager();
+            _netMng = new NetManager();
 
+            
         }
 
 
@@ -35,14 +41,17 @@ namespace GameDBms
         {
             if (_agentDB == null)
             {
-                DBAgent dbAgent = new DBAgent();
+                _agentDB = new DBAgent();
 
-                string result = dbAgent.ConnectCB(dbName, id, pw, _adminName, _portNumber);
+                string result = _agentDB.ConnectCB(dbName, id, pw, _adminName, _portNumber);
                 if (result.Length != 0)
                 {
                     Console.WriteLine("오류 : {0}", result);
                     return Result_Connect.Failed;
                 }
+
+                _netMng.InitNetwork(_agentDB);
+                _netMain = new Thread(_netMng.MainLoop);
             }
             else
             {
@@ -50,6 +59,7 @@ namespace GameDBms
                 return Result_Connect.Already;
             }
 
+            _netMain.Start();
             return Result_Connect.Success;
         }
 
@@ -71,13 +81,13 @@ namespace GameDBms
                     else if (result == Result_Connect.Success)
                     {
                         Console.Clear();
-                        _isQuit = ConnectLoop();
+                        _netMng._IsEnd = _isQuit = ConnectLoop();
                     }
                 }
                 else
                 {
                     //종료
-                    _isQuit = true;
+                    _netMng._IsEnd = _isQuit = true;
                 }
             }
         }
@@ -87,7 +97,7 @@ namespace GameDBms
             bool isExit = false;
             while (!isExit)
             {
-                int number = _cmdMng.GetSelectNumber("1. 테이블 생성\n2. 속성 추가 및 변경\n3. 테이블 삭제\n4. 이전으로\n항목을 선택하세요 :", 4);
+                int number = _cmdMng.GetSelectNumber("1. 테이블 생성\n2. 속성 추가 및 변경\n3. 테이블 삭제\n4. 이전으로\n5. 처음으로\n항목을 선택하세요 :", 5);
 
                 switch (number)
                 {

@@ -13,6 +13,8 @@ namespace GameDBms
     internal class NetManager
     {
         const short _port = 789;
+        DBAgent _agent;
+
         Socket _waitSocket;
         Socket _connectServer;
         bool _isQuit = false;
@@ -21,6 +23,11 @@ namespace GameDBms
 
         Queue<Packet> _sendQueue;
         Queue<Packet> _receiveQueue;
+
+        public bool _IsEnd
+        {
+            set => _isQuit = value;
+        }
 
         public NetManager()
         {
@@ -32,8 +39,10 @@ namespace GameDBms
             _receiveThread = new Thread(ReceiveLoop);
         }
 
-        public void InitNetwork()
+        public void InitNetwork(DBAgent agent)
         {
+            _agent = agent;
+
             _sendQueue = new Queue<Packet>();
             _receiveQueue = new Queue<Packet>();
 
@@ -42,12 +51,19 @@ namespace GameDBms
             _receiveThread.Start();
         }
 
-        public bool MainLoop()
+        public void MainLoop()
+        {
+            while (true)
+            {
+                if (Process())
+                    break;
+            }
+        }
+        public bool Process()
         {
             if (_waitSocket.Poll(0, SelectMode.SelectRead))
             {
                 _connectServer = _waitSocket.Accept();
-
                 Packet send = new Packet();
                 //내용 저장
 

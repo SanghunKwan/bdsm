@@ -23,7 +23,7 @@ namespace GameDBms
             _userID = id;
             _userPW = pw;
 
-            string connectMsg = string.Format("Server={0},Port={1},Database={2};Uid={3};Pwd{4};"
+            string connectMsg = string.Format("Server={0},Port={1},Database={2};Uid={3};Pwd={4};"
                                             , admin, port, _dbName, _userID, _userPW);
 
             try
@@ -32,7 +32,7 @@ namespace GameDBms
             }
             catch (Exception ex)
             {
-                return ex.ToString()    ;
+                return ex.ToString();
             }
             return string.Empty;
 
