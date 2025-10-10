@@ -98,15 +98,19 @@
     <Compile Include="CommandManager.cs" />
     <Compile Include="DBAgent.cs" />
     <Compile Include="DBManager.cs" />
-    <Compile Include="DBProtocol.cs" />
     <Compile Include="NetManager.cs" />
-    <Compile Include="PacketStruct.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\tGameServer\tGameServer\tGameServer\tGameServer.csproj">
+      <Project>{14ebaa64-59f7-4c41-9505-83cb7f67155d}</Project>
+      <Name>tGameServer</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
+using tGameServer.NetworkDefine;
 
 namespace GameDBms
 {
@@ -65,7 +63,10 @@ namespace GameDBms
             {
                 _connectServer = _waitSocket.Accept();
                 Packet send = new Packet();
-                //내용 저장
+
+                //서버에 접속이 되었다고 알려야 함.
+                Packet pack = ConverterPack.CreatePack((uint)DBProtocol.Send.DBConnect_Success, 0, null);
+                SendQueueIn(pack);
 
                 _sendQueue.Enqueue(send);
 
@@ -76,8 +77,18 @@ namespace GameDBms
                 try
                 {
                     //byte 배열에서 Packet으로 변환.
-                    Packet receive = new Packet();
-                    _receiveQueue.Enqueue(receive);
+                    byte[] buffer = new byte[1024];
+                    int receiveLength = _connectServer.Receive(buffer);
+                    if (receiveLength > 0)
+                    {
+                        Packet receive = (Packet)ConverterPack.ByteArrayToStructure(buffer, typeof(Packet), receiveLength);
+                        _receiveQueue.Enqueue(receive);
+                    }
+                    else
+                    {
+
+                    }
+                    //_receiveQueue.Enqueue(receive);
                 }
                 catch (Exception ex)
                 {
@@ -97,9 +108,8 @@ namespace GameDBms
                     //send처리.
                     Packet send = _sendQueue.Dequeue();
                     //send를 byte[]로 변환.
-                    byte[] data = new byte[1024];//임시 사이즈.
-
-                    _connectServer.Send(data);
+                    byte[] pack = ConverterPack.StructureToByteArray(send);
+                    _connectServer.Send(pack);
                 }
             }
         }
@@ -112,9 +122,35 @@ namespace GameDBms
                     //receive처리.
                     Packet pack = _receiveQueue.Dequeue();
 
+                    switch ((DBProtocol.Receive)pack._protocol)
+                    {
+                        case DBProtocol.Receive.Join_User:
+                            Console.WriteLine(" Receive.Join_User 신호가 들어왔습니다.");
+                            Packet_Join packJoin = (Packet_Join)ConverterPack.ByteArrayToStructure(pack._data, typeof(Packet_Join), (int)pack._totalSize);
+                            Console.WriteLine("id:{0}, pw:{1}, name:{2}, stage:{3}, gold:{4}", packJoin._id, packJoin._pw,  packJoin._name, packJoin._clearStage, packJoin._gold);
+
+                            //서버로 회답.
+
+
+                            break;
+
+                        case DBProtocol.Receive.Login_User:
+                            Console.WriteLine("Receive.Login_User 신호가 들어왔습니다.");
+                            Packet_Login packLogin= (Packet_Login)ConverterPack.ByteArrayToStructure(pack._data, typeof(Packet_Login), (int)pack._totalSize);
+                            Console.WriteLine("id:{0}, pw:{1}", packLogin._id, packLogin._pw);
+                            break;
+                    }
                     //receive protocol에 따라 처리.
                 }
             }
+        }
+
+        public void SendQueueIn(Packet pack)
+        {
+            if (pack._protocol < (uint)DBProtocol.Send.End)
+                _sendQueue.Enqueue(pack);
+            else
+                Console.WriteLine("알 수 없는 프로토콜이 감지되었습니다.(번호[{0}])", pack._protocol);
         }
     }
 }

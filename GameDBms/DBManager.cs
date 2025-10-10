@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Threading;
+using tGameServer.NetworkDefine;
 
 namespace GameDBms
 {
@@ -60,6 +61,8 @@ namespace GameDBms
             }
 
             _netMain.Start();
+            
+
             return Result_Connect.Success;
         }
 
@@ -76,7 +79,7 @@ namespace GameDBms
                     string dbName = _cmdMng.GetSelectText("DB 이름을 입력하세요 : ");
 
                     Result_Connect result = ConnectDB(account, pass, dbName);
-                    if (result == Result_Connect.Failed)
+                    if (result == Result_Connect.Failed || result == Result_Connect.Already)
                         _isQuit = true;
                     else if (result == Result_Connect.Success)
                     {
