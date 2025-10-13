@@ -107,7 +107,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\tGameServer\tGameServer\tGameServer\tGameServer.csproj">
+    <ProjectReference Include="..\..\tGameServer\tGameServer\tGameServer.csproj">
       <Project>{14ebaa64-59f7-4c41-9505-83cb7f67155d}</Project>
       <Name>tGameServer</Name>
     </ProjectReference>

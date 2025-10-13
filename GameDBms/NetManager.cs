@@ -128,9 +128,8 @@ namespace GameDBms
                             Console.WriteLine(" Receive.Join_User 신호가 들어왔습니다.");
                             Packet_Join packJoin = (Packet_Join)ConverterPack.ByteArrayToStructure(pack._data, typeof(Packet_Join), (int)pack._totalSize);
                             Console.WriteLine("id:{0}, pw:{1}, name:{2}, stage:{3}, gold:{4}", packJoin._id, packJoin._pw,  packJoin._name, packJoin._clearStage, packJoin._gold);
-
                             //서버로 회답.
-
+                            SendQueueIn(ConverterPack.CreatePack((uint)DBProtocol.Send.Join_Success, 0, null));
 
                             break;
 
@@ -138,6 +137,13 @@ namespace GameDBms
                             Console.WriteLine("Receive.Login_User 신호가 들어왔습니다.");
                             Packet_Login packLogin= (Packet_Login)ConverterPack.ByteArrayToStructure(pack._data, typeof(Packet_Login), (int)pack._totalSize);
                             Console.WriteLine("id:{0}, pw:{1}", packLogin._id, packLogin._pw);
+
+                            Packet_LoginData data;
+                            data._name = "asdf";
+                            data._clearStage = 1;
+                            data._gold = 1000;
+                            byte[] bytes = ConverterPack.StructureToByteArray(data);
+                            SendQueueIn(ConverterPack.CreatePack((uint)DBProtocol.Send.Login_Success, (uint)bytes.Length, bytes));
                             break;
                     }
                     //receive protocol에 따라 처리.
