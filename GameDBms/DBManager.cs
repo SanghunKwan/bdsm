@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Threading;
@@ -21,7 +19,7 @@ namespace GameDBms
     {
         const string _adminName = "localHost";
         const int _portNumber = 3306;
-
+        long _stdUUID = 10000000000000000;
 
         DBAgent _agentDB;
         CommandManager _cmdMng;
@@ -153,7 +151,7 @@ namespace GameDBms
             switch (select)
             {
                 case 1://추가
-
+                    InsertRow(_agentDB._selectDBName, name);
                     break;
                 case 2://수정
                     break;
@@ -177,6 +175,12 @@ namespace GameDBms
 
 
             return false;
+        }
+
+        void InsertRow(in string dbName, in string tableName)
+        {
+            //_agentDB._selectDBName
+            //"INSERT INTO `gamedb`.`userinfodata` (`UUID`, `AccountID`, `AccountPW`, `UserName`, `ClearStage`, `IngameGold`) VALUES ('1', '2', '3', '4', '5', '6');"
         }
     }
 }
