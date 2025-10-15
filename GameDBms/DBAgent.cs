@@ -86,6 +86,18 @@ namespace GameDBms
 
             return command.ExecuteNonQuery();
         }
-        
+        public object SendQueryExcuteRead(in string query)
+        {
+            MySqlCommand command = new MySqlCommand(query, _connection);
+
+            using (MySqlDataReader reader = command.ExecuteReader())
+            {
+                if (reader.Read())
+                    return reader["AccountPW"];
+                else
+                    return null;
+            }
+        }
+
     }
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Mysqlx;
+using MySqlX.XDevAPI.Relational;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -129,6 +131,10 @@ namespace GameDBms
                         case DBProtocol.Receive.Login_User:
                             ReceiveLogin(pack);
                             break;
+
+                        case DBProtocol.Receive.CheckId_User:
+                            ReceiveCheckId(pack);
+                            break;
                     }
                     //receive protocol에 따라 처리.
                 }
@@ -143,37 +149,32 @@ namespace GameDBms
         }
         public bool CheckJoin(string table, string userID, out uint error)
         {
-            error = 0;
-
             //1. id 유효성 검사
-            if (userID.Length <= 0 || userID.Length > 10)
-            {
-                error = 1;
+            if (!IsIdValid(userID, out error))
                 return false;
-            }
 
-            for (int i = 0; i < userID.Length; i++)
-            {
-                if (!char.IsLetterOrDigit(userID[i]))
-                {
-                    error = 2;
-                    return false;
-                }
-            }
-
-            string queryDlg = _agent.MakeQuery(table, QueryType.SelectID, userID);
-
-            if (_agent.SendQueryExcuteScalar(queryDlg) != null)
+            if(HasID(table, userID))
             {
                 error = 3;
                 return false;
             }
+
             return true;
         }
-        public bool CheckLogin(in string table, in string userID, in string userPwd, out uint error)
+        public bool HasID(in string table, in string userID)
         {
-            error = 0;
+            string queryDlg = _agent.MakeQuery(table, QueryType.SelectID, userID);
 
+            return _agent.SendQueryExcuteScalar(queryDlg) != null;
+        }
+        public bool HasID(in string table, in string userID, in string userPwd)
+        {
+            string queryDlg = _agent.MakeQuery(table, QueryType.SelectPw, userID, userPwd);
+
+            return _agent.SendQueryExcuteScalar(queryDlg) != null;
+        }
+        public bool IsIdValid(in string userID, out uint error)
+        {
             if (userID.Length <= 0 || userID.Length > 10)
             {
                 error = 1;
@@ -189,16 +190,20 @@ namespace GameDBms
                 }
             }
 
-            string queryDlg = _agent.MakeQuery(table, QueryType.SelectPw, userID, userPwd);
+            error = 0;
+            return true;
+        }
 
-            if (_agent.SendQueryExcuteScalar(queryDlg) == null)
+        public bool CheckLogin(in string table, in string userID, in string userPwd, out uint error)
+        {
+            if(!IsIdValid(userID, out error))
+                return false;
+
+            if(!HasID(table, userID, userPwd))
             {
                 error = 3;
                 return false;
             }
-
-
-
 
             return true;
         }
@@ -257,7 +262,19 @@ namespace GameDBms
             
             SendQueueIn(send);
         }
+        void ReceiveCheckId(Packet receive)
+        {
+            Console.WriteLine("Receive.CheckId_User 신호가 들어왔습니다.");
+            Packet_Login packLogin = (Packet_Login)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Login), (int)receive._totalSize);
+            Console.WriteLine("id:{0}", packLogin._id);
+            Packet send;
+            if (HasID(_userTable, packLogin._id))
+                send = ConverterPack.CreatePack((uint)DBProtocol.Send.CheckId_Success, 0, null);
+            else
+                send = ConverterPack.CreatePack((uint)DBProtocol.Send.CheckId_Failed, 0, null);
 
+            SendQueueIn(send);
+        }
 
         #endregion [리시브 처리 함수]
     }
