@@ -265,7 +265,7 @@ namespace GameDBms
         void ReceiveCheckId(Packet receive)
         {
             Console.WriteLine("Receive.CheckId_User 신호가 들어왔습니다.");
-            Packet_Login packLogin = (Packet_Login)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Login), (int)receive._totalSize);
+            Packet_DuplicationId packLogin = (Packet_DuplicationId)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_DuplicationId), (int)receive._totalSize);
             Console.WriteLine("id:{0}", packLogin._id);
             Packet send;
             if (HasID(_userTable, packLogin._id))
