@@ -1,7 +1,8 @@
 ﻿using Mysqlx;
-using MySqlX.XDevAPI.Relational;
+using Org.BouncyCastle.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -23,8 +24,8 @@ namespace GameDBms
         Thread _sendThread;
         Thread _receiveThread;
 
-        Queue<Packet> _sendQueue;
-        Queue<Packet> _receiveQueue;
+        Queue<Packet_uuid> _sendQueue;
+        Queue<Packet_uuid> _receiveQueue;
 
         public bool _IsEnd
         {
@@ -45,8 +46,8 @@ namespace GameDBms
         {
             _agent = agent;
 
-            _sendQueue = new Queue<Packet>();
-            _receiveQueue = new Queue<Packet>();
+            _sendQueue = new Queue<Packet_uuid>();
+            _receiveQueue = new Queue<Packet_uuid>();
 
             //쓰레드 가동.
             _sendThread.Start();
@@ -68,7 +69,11 @@ namespace GameDBms
                 _connectServer = _waitSocket.Accept();
                 //서버에 접속이 되었다고 알려야 함.
                 Console.WriteLine("서버 연결");
-                Packet pack = ConverterPack.CreatePack((uint)DBProtocol.Send.DBConnect_Success, 0, null);
+                Packet_uuid pack;
+                pack._protocol = (uint)DBProtocol.Send.DBConnect_Success;
+                pack._totalSize = 0;
+                pack._data = null;
+                pack._uuid = 10000000000000000;
                 SendQueueIn(pack);
             }
 
@@ -81,7 +86,7 @@ namespace GameDBms
                     int receiveLength = _connectServer.Receive(buffer);
                     if (receiveLength > 0)
                     {
-                        Packet receive = (Packet)ConverterPack.ByteArrayToStructure(buffer, typeof(Packet), receiveLength);
+                        Packet_uuid receive = (Packet_uuid)ConverterPack.ByteArrayToStructure(buffer, typeof(Packet_uuid), receiveLength);
                         _receiveQueue.Enqueue(receive);
                     }
                     else
@@ -106,7 +111,7 @@ namespace GameDBms
                 if (_sendQueue.Count > 0)
                 {
                     //send처리.
-                    Packet send = _sendQueue.Dequeue();
+                    Packet_uuid send = _sendQueue.Dequeue();
                     //send를 byte[]로 변환.
                     byte[] pack = ConverterPack.StructureToByteArray(send);
                     _connectServer.Send(pack);
@@ -120,7 +125,7 @@ namespace GameDBms
                 if (_receiveQueue.Count > 0)
                 {
                     //receive처리.
-                    Packet pack = _receiveQueue.Dequeue();
+                    Packet_uuid pack = _receiveQueue.Dequeue();
 
                     switch ((DBProtocol.Receive)pack._protocol)
                     {
@@ -140,7 +145,7 @@ namespace GameDBms
                 }
             }
         }
-        public void SendQueueIn(Packet pack)
+        public void SendQueueIn(Packet_uuid pack)
         {
             if (pack._protocol < (uint)DBProtocol.Send.End)
                 _sendQueue.Enqueue(pack);
@@ -210,37 +215,42 @@ namespace GameDBms
 
 
         #region [리시브 처리 함수]
-        void ReceiveJoin(Packet receive)
+        void ReceiveJoin(Packet_uuid receive)
         {
             Console.WriteLine(" Receive.Join_User 신호가 들어왔습니다.");
             Packet_Join packJoin = (Packet_Join)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Join), (int)receive._totalSize);
-            Packet send;
+            Packet_uuid send;
             if (CheckJoin(_userTable, packJoin._id, out uint error))
             {
                 //검사 성공. 고유 id 생성 및 db에 저장.
                 string query = _agent.MakeQuery(_userTable, QueryType.Insert, "1000000", packJoin._id, packJoin._pw, packJoin._name, packJoin._clearStage.ToString(), packJoin._gold.ToString());
                 _agent.SendQueryExcuteNoQuery(query);
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.Join_Success, 0, null);
-
+                send._protocol = (uint)DBProtocol.Send.Join_Success;
+                send._totalSize = 0;
+                send._data = null;
+                send._uuid = 10000000000000000;
             }
             else
             {
                 //검사 실패. failed. (1. 글자수 2. 쓸 수 없는 문자. 3. 중복)
-                Packet_Std_Failed failed = new Packet_Std_Failed();
+                Packet_Std_Failed failed;
                 failed._errorCord = error;
                 byte[] datas = ConverterPack.StructureToByteArray(failed);
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.Join_Failed, (uint)datas.Length, datas);
+                send._protocol = (uint)DBProtocol.Send.Join_Failed;
+                send._totalSize = (uint)datas.Length;
+                send._data = datas;
+                send._uuid = 10000000000000000;
             }
             //string queryDlg = _agent.
             //서버로 회답.
             SendQueueIn(send);
         }
-        void ReceiveLogin(Packet receive)
+        void ReceiveLogin(Packet_uuid receive)
         {
             Console.WriteLine("Receive.Login_User 신호가 들어왔습니다.");
             Packet_Login packLogin = (Packet_Login)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Login), (int)receive._totalSize);
             Console.WriteLine("id:{0}, pw:{1}", packLogin._id, packLogin._pw);
-            Packet send;
+            Packet_uuid send;
             if (CheckLogin(_userTable, packLogin._id, packLogin._pw, out uint error))
             {
 
@@ -249,29 +259,47 @@ namespace GameDBms
                 data._clearStage = 1;
                 data._gold = 1000;
                 byte[] bytes = ConverterPack.StructureToByteArray(data);
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.Login_Success, (uint)bytes.Length, bytes);
+
+                send._protocol = (uint)DBProtocol.Send.Login_Success;
+                send._totalSize = (uint)bytes.Length;
+                send._data = bytes;
+                send._uuid = 10000000000000000;
             }
             else
             {
-                Packet_Std_Failed failed = new Packet_Std_Failed();
+                Packet_Std_Failed failed;
                 failed._errorCord = error;
                 byte[] datas = ConverterPack.StructureToByteArray(failed);
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.Login_Failed, (uint)datas.Length, datas);
+
+                send._protocol = (uint)DBProtocol.Send.Login_Failed;
+                send._totalSize = (uint)datas.Length;
+                send._data = datas;
+                send._uuid = 10000000000000000;
             }
 
             
             SendQueueIn(send);
         }
-        void ReceiveCheckId(Packet receive)
+        void ReceiveCheckId(Packet_uuid receive)
         {
             Console.WriteLine("Receive.CheckId_User 신호가 들어왔습니다.");
             Packet_DuplicationId packLogin = (Packet_DuplicationId)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_DuplicationId), (int)receive._totalSize);
             Console.WriteLine("id:{0}", packLogin._id);
-            Packet send;
+            Packet_uuid send;
             if (HasID(_userTable, packLogin._id))
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.CheckId_Success, 0, null);
+            {
+                send._protocol = (uint)DBProtocol.Send.CheckId_Success;
+                send._totalSize = 0;
+                send._data = null;
+                send._uuid = 10000000000000000;
+            }
             else
-                send = ConverterPack.CreatePack((uint)DBProtocol.Send.CheckId_Failed, 0, null);
+            {
+                send._protocol = (uint)DBProtocol.Send.CheckId_Failed;
+                send._totalSize = 0;
+                send._data = null;
+                send._uuid = 10000000000000000;
+            }
 
             SendQueueIn(send);
         }
