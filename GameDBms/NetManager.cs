@@ -72,7 +72,7 @@ namespace GameDBms
                 Packet_uuid pack;
                 pack._protocol = (uint)DBProtocol.Send.DBConnect_Success;
                 pack._totalSize = 0;
-                pack._data = null;
+                pack._data = new byte[1008];
                 pack._uuid = 10000000000000000;
                 SendQueueIn(pack);
             }
@@ -220,6 +220,7 @@ namespace GameDBms
             Console.WriteLine(" Receive.Join_User 신호가 들어왔습니다.");
             Packet_Join packJoin = (Packet_Join)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Join), (int)receive._totalSize);
             Packet_uuid send;
+            send._data = new byte[1008];
             if (CheckJoin(_userTable, packJoin._id, out uint error))
             {
                 //검사 성공. 고유 id 생성 및 db에 저장.
@@ -227,7 +228,6 @@ namespace GameDBms
                 _agent.SendQueryExcuteNoQuery(query);
                 send._protocol = (uint)DBProtocol.Send.Join_Success;
                 send._totalSize = 0;
-                send._data = null;
                 send._uuid = 10000000000000000;
             }
             else
@@ -238,7 +238,7 @@ namespace GameDBms
                 byte[] datas = ConverterPack.StructureToByteArray(failed);
                 send._protocol = (uint)DBProtocol.Send.Join_Failed;
                 send._totalSize = (uint)datas.Length;
-                send._data = datas;
+                Array.Copy(datas, send._data, datas.Length);
                 send._uuid = 10000000000000000;
             }
             //string queryDlg = _agent.
@@ -251,6 +251,7 @@ namespace GameDBms
             Packet_Login packLogin = (Packet_Login)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Login), (int)receive._totalSize);
             Console.WriteLine("id:{0}, pw:{1}", packLogin._id, packLogin._pw);
             Packet_uuid send;
+            send._data = new byte[1008];
             if (CheckLogin(_userTable, packLogin._id, packLogin._pw, out uint error))
             {
 
@@ -262,7 +263,7 @@ namespace GameDBms
 
                 send._protocol = (uint)DBProtocol.Send.Login_Success;
                 send._totalSize = (uint)bytes.Length;
-                send._data = bytes;
+                Array.Copy(bytes, send._data, bytes.Length);
                 send._uuid = 10000000000000000;
             }
             else
@@ -273,7 +274,7 @@ namespace GameDBms
 
                 send._protocol = (uint)DBProtocol.Send.Login_Failed;
                 send._totalSize = (uint)datas.Length;
-                send._data = datas;
+                Array.Copy(datas, send._data, datas.Length);
                 send._uuid = 10000000000000000;
             }
 
@@ -286,18 +287,17 @@ namespace GameDBms
             Packet_DuplicationId packLogin = (Packet_DuplicationId)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_DuplicationId), (int)receive._totalSize);
             Console.WriteLine("id:{0}", packLogin._id);
             Packet_uuid send;
+            send._data = new byte[1008];
             if (HasID(_userTable, packLogin._id))
             {
                 send._protocol = (uint)DBProtocol.Send.CheckId_Success;
                 send._totalSize = 0;
-                send._data = null;
                 send._uuid = 10000000000000000;
             }
             else
             {
                 send._protocol = (uint)DBProtocol.Send.CheckId_Failed;
                 send._totalSize = 0;
-                send._data = null;
                 send._uuid = 10000000000000000;
             }
 
