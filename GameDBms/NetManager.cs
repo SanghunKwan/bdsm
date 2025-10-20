@@ -152,10 +152,13 @@ namespace GameDBms
             else
                 Console.WriteLine("알 수 없는 프로토콜이 감지되었습니다.(번호[{0}])", pack._protocol);
         }
-        public bool CheckJoin(string table, string userID, out uint error)
+        public bool CheckJoin(string table, string userID,string userPw, out uint error)
         {
             //1. id 유효성 검사
             if (!IsIdValid(userID, out error))
+                return false;
+
+            if(!IsPwValid(userPw, out error))
                 return false;
 
             if(HasID(table, userID))
@@ -198,6 +201,17 @@ namespace GameDBms
             error = 0;
             return true;
         }
+        public bool IsPwValid(in string userPw, out uint error)
+        {
+            if (userPw.Length <= 0 || userPw.Length > 45)
+            {
+                error = 4;
+                return false;
+            }
+
+            error = 0;
+            return true;
+        }
 
         public bool CheckLogin(in string table, in string userID, in string userPwd, out uint error)
         {
@@ -221,25 +235,25 @@ namespace GameDBms
             Packet_Join packJoin = (Packet_Join)ConverterPack.ByteArrayToStructure(receive._data, typeof(Packet_Join), (int)receive._totalSize);
             Packet_uuid send;
             send._data = new byte[1008];
-            if (CheckJoin(_userTable, packJoin._id, out uint error))
+            if (CheckJoin(_userTable, packJoin._id,packJoin._pw, out uint error))
             {
                 //검사 성공. 고유 id 생성 및 db에 저장.
-                string query = _agent.MakeQuery(_userTable, QueryType.Insert, "1000000", packJoin._id, packJoin._pw, packJoin._name, packJoin._clearStage.ToString(), packJoin._gold.ToString());
+                string query = _agent.MakeQuery(_userTable, QueryType.Insert, receive._uuid.ToString(), packJoin._id, packJoin._pw, packJoin._name, packJoin._clearStage.ToString(), packJoin._gold.ToString());
                 _agent.SendQueryExcuteNoQuery(query);
                 send._protocol = (uint)DBProtocol.Send.Join_Success;
                 send._totalSize = 0;
-                send._uuid = 10000000000000000;
+                send._uuid = receive._uuid;
             }
             else
             {
-                //검사 실패. failed. (1. 글자수 2. 쓸 수 없는 문자. 3. 중복)
+                //검사 실패. failed. (1. 글자수 2. 쓸 수 없는 문자. 3. 중복 4. pw 글자수)
                 Packet_Std_Failed failed;
                 failed._errorCord = error;
                 byte[] datas = ConverterPack.StructureToByteArray(failed);
                 send._protocol = (uint)DBProtocol.Send.Join_Failed;
                 send._totalSize = (uint)datas.Length;
                 Array.Copy(datas, send._data, datas.Length);
-                send._uuid = 10000000000000000;
+                send._uuid = receive._uuid;
             }
             //string queryDlg = _agent.
             //서버로 회답.
@@ -288,6 +302,7 @@ namespace GameDBms
             Console.WriteLine("id:{0}", packLogin._id);
             Packet_uuid send;
             send._data = new byte[1008];
+
             if (HasID(_userTable, packLogin._id))
             {
                 send._protocol = (uint)DBProtocol.Send.CheckId_Success;
